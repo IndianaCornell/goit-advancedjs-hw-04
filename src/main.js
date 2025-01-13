@@ -23,6 +23,7 @@ inputSearch.addEventListener('input', event => {
 
 fetchSearchBtn.addEventListener('click', async event => {
   event.preventDefault();
+  hideLoadMoreBtn();
   searchList.innerHTML = '';
   page = 1;
 
@@ -73,8 +74,6 @@ async function loadImages() {
     lightbox.refresh();
   }
 
-  showLoadMoreBtn();
-
   if (!posts.hits.length) {
     iziToast.error({
       title: 'Error',
@@ -92,7 +91,8 @@ async function loadImages() {
       title: 'Warning',
       message: `We're sorry, but you've reached the end of search results.`,
     });
-    return;
+  } else {
+    showLoadMoreBtn();
   }
 
   page += 1;
