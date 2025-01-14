@@ -27,19 +27,15 @@ fetchSearchBtn.addEventListener('click', async event => {
   searchList.innerHTML = '';
   page = 1;
 
-  showLoader();
-  await loadImages();
-
   if (!search) {
-    hideLoadMoreBtn();
+    hideLoader();
     iziToast.error({
       title: 'Error',
       message: 'Please fill out search field',
     });
     return;
   }
-
-  hideLoader();
+  await loadImages();
 });
 
 loadMoreButton.addEventListener('click', async event => {
@@ -49,53 +45,68 @@ loadMoreButton.addEventListener('click', async event => {
     .querySelector('.card')
     .getBoundingClientRect().height;
   const scrollHeight =
-    cardHeight * 2 + parseFloat(getComputedStyle(searchList).rowGap) - 200;
+    cardHeight * 2 + parseFloat(getComputedStyle(searchList).rowGap) + 120;
 
-  showLoader();
   await loadImages();
   scrollDown(scrollHeight);
-  hideLoader();
 });
 
 async function loadImages() {
-  const posts = await searchImages(search, page, limit);
-  const totalPages = Math.ceil(posts.total / limit);
+  try {
+    hideLoadMoreBtn();
+    showLoader();
 
-  const galleryMarkup = createGalleryCards(posts.hits);
-  searchList.insertAdjacentHTML('beforeend', galleryMarkup);
+    const posts = await searchImages(search, page, limit);
 
-  if (!lightbox) {
-    lightbox = new SimpleLightbox('.search-list a', {
-      captions: true,
-      captionsData: 'alt',
-      captionDelay: 250,
-    });
-  } else {
-    lightbox.refresh();
-  }
+    if (!posts.hits.length) {
+      iziToast.error({
+        title: 'Error',
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+      });
+      hideLoadMoreBtn();
+      searchList.innerHTML = '';
+      hideLoader();
+      return;
+    }
 
-  if (!posts.hits.length) {
+    const totalPages = Math.ceil(posts.total / limit);
+
+    const galleryMarkup = createGalleryCards(posts.hits);
+    searchList.insertAdjacentHTML('beforeend', galleryMarkup);
+
+    if (!lightbox) {
+      lightbox = new SimpleLightbox('.search-list a', {
+        captions: true,
+        captionsData: 'alt',
+        captionDelay: 250,
+      });
+    } else {
+      lightbox.refresh();
+    }
+
+    if (page >= totalPages) {
+      hideLoadMoreBtn();
+      iziToast.warning({
+        title: 'Warning',
+        message: `We're sorry, but you've reached the end of search results.`,
+      });
+    } else {
+      showLoadMoreBtn();
+    }
+
+    page += 1;
+    hideLoader();
+  } catch (error) {
     iziToast.error({
       title: 'Error',
-      message:
-        'Sorry, there are no images matching your search query. Please try again!',
+      message: `An error occurred while loading images: ${error.message}`,
     });
+    console.error('Error in loadImages:', error);
     hideLoadMoreBtn();
     searchList.innerHTML = '';
-    return;
+    hideLoader();
   }
-
-  if (page >= totalPages) {
-    hideLoadMoreBtn();
-    iziToast.warning({
-      title: 'Warning',
-      message: `We're sorry, but you've reached the end of search results.`,
-    });
-  } else {
-    showLoadMoreBtn();
-  }
-
-  page += 1;
 }
 
 function scrollDown(height) {
